@@ -55,7 +55,7 @@ class VerificationNet:
             self.model.load_weights(filepath=self.file_name)
             # print(f"Read model from file, so I do not retrain")
             done_training = True
-        except: # pylint: disable=bare-except
+        except:  # pylint: disable=bare-except
             print(
                 "Could not read weights for verification_net from file. Must retrain..."
             )
