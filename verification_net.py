@@ -1,4 +1,4 @@
-"""Docstring, get away pylint"""
+"""Not Haakon8855"""
 
 from tensorflow import keras
 from tensorflow.keras.models import Sequential  # pylint: disable=import-error,no-name-in-module

@@ -1,4 +1,4 @@
-"""Docstring, get away pylint"""
+"""Not Haakon8855"""
 
 from enum import auto, Enum
 import numpy as np
