@@ -8,13 +8,13 @@ from verification_net import VerificationNet
 from stacked_mnist import StackedMNISTData, DataMode
 
 
-class Autoencoder(ks.models.Model):
+class AutoEncoder(ks.models.Model):
     """
     Auto-encoder class for encoding images as low-dimensional representations.
     """
 
     def __init__(self, latent_dim):
-        super(Autoencoder, self).__init__()
+        super(AutoEncoder, self).__init__()
         self.latent_dim = latent_dim
         self.encoder = ks.Sequential([
             ks.layers.Flatten(),
@@ -56,7 +56,7 @@ def main():
     latent_dim = 64
     epochs = 10
 
-    auto_encoder = Autoencoder(latent_dim)
+    auto_encoder = AutoEncoder(latent_dim)
     auto_encoder.compile(
         optimizer='adam',
         loss=ks.losses.categorical_crossentropy,
