@@ -13,17 +13,47 @@ class AutoEncoder(ks.models.Model):
     Auto-encoder class for encoding images as low-dimensional representations.
     """
 
-    def __init__(self, latent_dim):
+    def __init__(self, latent_dim, image_size):
         super(AutoEncoder, self).__init__()
         self.latent_dim = latent_dim
+        self.image_size = image_size
         self.encoder = ks.Sequential([
             ks.layers.Flatten(),
-            ks.layers.Dense(latent_dim, activation='relu')
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(latent_dim, activation='relu'),
         ])
         self.decoder = ks.Sequential([
-            ks.layers.Dense(784, activation='sigmoid'),
-            ks.layers.Reshape((28, 28))
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(image_size**2, activation='sigmoid'),
+            ks.layers.Reshape((image_size, image_size))
         ])
+        # self.encoder = ks.Sequential([
+        #     ks.Input(shape=(image_size, image_size, 1)),
+        #     ks.layers.Conv2D(16, (3, 3), activation='relu', padding='same'),
+        #     # ks.layers.Conv2D(8, (3, 3), activation='relu', padding='same'),
+        #     ks.layers.Flatten(),
+        #     ks.layers.Dense(latent_dim, activation='relu'),
+        # ])
+        # self.decoder = ks.Sequential([
+        #     ks.layers.Dense(image_size**2, activation='relu'),
+        #     ks.layers.Reshape((image_size, image_size, 1)),
+        #     # ks.layers.Conv2DTranspose(8,
+        #     #                           kernel_size=3,
+        #     #                           activation='relu',
+        #     #                           padding='same'),
+        #     ks.layers.Conv2DTranspose(16,
+        #                               kernel_size=3,
+        #                               activation='relu',
+        #                               padding='same'),
+        #     ks.layers.Conv2D(1,
+        #                      kernel_size=(3, 3),
+        #                      activation='sigmoid',
+        #                      padding='same'),
+        # ])
 
     def call(self, x_input):
         """
@@ -53,13 +83,16 @@ def main():
     net = VerificationNet(force_learn=False)
     net.train(generator=gen, epochs=5)
 
-    latent_dim = 64
-    epochs = 10
+    latent_dim = 2
+    epochs = 20
+    image_size = 28
 
-    auto_encoder = AutoEncoder(latent_dim)
+    auto_encoder = AutoEncoder(latent_dim, image_size)
     auto_encoder.compile(
         optimizer='adam',
-        loss=ks.losses.categorical_crossentropy,
+        loss=ks.losses.BinaryCrossentropy(),
+        # loss=ks.losses.MeanSquaredError()
+        #  loss=ks.losses.categorical_crossentropy
     )
     auto_encoder.fit(x_train,
                      x_train,
@@ -71,13 +104,13 @@ def main():
     encoded_imgs = auto_encoder.encoder(x_test).numpy()
     decoded_imgs = auto_encoder.decoder(encoded_imgs).numpy()
 
-    n = 10
+    n = 20
     plt.figure(figsize=(20, 4))
     for i in range(n):
         # Display original
         ax = plt.subplot(2, n, i + 1)
         plt.imshow(x_test[i])
-        plt.title("original")
+        plt.title(i + 1)
         plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -85,7 +118,7 @@ def main():
         # Display reconstruction
         ax = plt.subplot(2, n, i + 1 + n)
         plt.imshow(decoded_imgs[i])
-        plt.title("reconstructed")
+        plt.title(i + 1)
         plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
