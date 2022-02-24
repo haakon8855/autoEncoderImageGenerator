@@ -41,41 +41,6 @@ class AutoEncoder(ks.models.Model):
             ks.layers.Reshape((image_size, image_size))
         ])
         self.decoder.summary()
-        # self.encoder = ks.Sequential([
-        #     ks.Input(shape=(image_size, image_size, 1)),
-        #     ks.layers.Conv2D(8, (3, 3),
-        #                      activation='relu',
-        #                      padding='same',
-        #                      strides=2),
-        #     ks.layers.Dropout(0.25),
-        #     ks.layers.Conv2D(4, (3, 3),
-        #                      activation='relu',
-        #                      padding='same',
-        #                      strides=2),
-        #     ks.layers.Dropout(0.25),
-        #     ks.layers.Flatten(),
-        #     ks.layers.Dense(latent_dim, activation='relu'),
-        # ])
-        # self.encoder.summary()
-        # self.decoder = ks.Sequential([
-        #     ks.Input(shape=(latent_dim)),
-        #     ks.layers.Dense(image_size**2, activation='relu'),
-        #     ks.layers.Reshape((image_size, image_size, 1)),
-        #     ks.layers.Conv2DTranspose(4,
-        #                               kernel_size=3,
-        #                               activation='relu',
-        #                               padding='same'),
-        #     ks.layers.Dropout(0.25),
-        #     ks.layers.Conv2DTranspose(8,
-        #                               kernel_size=3,
-        #                               activation='relu',
-        #                               padding='same'),
-        #     ks.layers.Dropout(0.25),
-        #     ks.layers.Conv2D(1,
-        #                      kernel_size=(3, 3),
-        #                      activation='sigmoid',
-        #                      padding='same')
-        # ])
         self.done_training = self.load_all_weights()
 
     def load_all_weights(self):
@@ -126,10 +91,12 @@ def main():
     """
     Main function for running the auto encoder.
     """
+    gen_missing = StackedMNISTData(mode=DataMode.MONO_BINARY_MISSING,
+                                   default_batch_size=2048)
+
+    x_train, y_train = gen_missing.get_full_data_set(training=True)
     gen = StackedMNISTData(mode=DataMode.MONO_BINARY_COMPLETE,
                            default_batch_size=2048)
-
-    x_train, y_train = gen.get_full_data_set(training=True)
     x_test, y_test = gen.get_full_data_set(training=False)
     # "Translate": Only look at "red" channel;
     # only use the last digit. Use one-hot for labels during training
@@ -148,8 +115,6 @@ def main():
     auto_encoder.compile(
         optimizer='adam',
         loss=ks.losses.BinaryCrossentropy(),
-        # loss=ks.losses.MeanSquaredError()
-        #  loss=ks.losses.categorical_crossentropy
     )
     auto_encoder.train(x_train,
                        epochs=epochs,
@@ -160,14 +125,41 @@ def main():
     encoded_imgs = auto_encoder.encoder(x_test).numpy()
     decoded_imgs = auto_encoder.decoder(encoded_imgs).numpy()
 
-    print(y_test[:20])
+    loss = []
+    for i in range(1000):
+        x_true = x_test[i, :, :, :][np.newaxis, :, :, :]
+        x_pred = decoded_imgs[:, :, :,
+                              np.newaxis][i, :, :, :][np.newaxis, :, :, :]
+        loss.append(auto_encoder.evaluate(x_true, x_pred, verbose=0))
+
+    k = 10
+    largest_loss = np.argpartition(loss, -k)[-k:]
+    plt.figure(figsize=(4, 4))
+    for i in range(k):
+        # Display original
+        ax = plt.subplot(2, k, i + 1)
+        plt.imshow(x_test[largest_loss[i]])
+        plt.title(i + 1)
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        # Display most loss
+        ax = plt.subplot(2, k, i + k + 1)
+        plt.imshow(decoded_imgs[largest_loss[i]])
+        plt.title(i + 1)
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.show()
 
     n = 20
+    offset = 60
+    print(y_test[offset:n + offset])
     plt.figure(figsize=(20, 4))
     for i in range(n):
         # Display original
         ax = plt.subplot(2, n, i + 1)
-        plt.imshow(x_test[i])
+        plt.imshow(x_test[i + offset])
         plt.title(i + 1)
         plt.gray()
         ax.get_xaxis().set_visible(False)
@@ -175,7 +167,7 @@ def main():
 
         # Display reconstruction
         ax = plt.subplot(2, n, i + 1 + n)
-        plt.imshow(decoded_imgs[i])
+        plt.imshow(decoded_imgs[i + offset])
         plt.title(i + 1)
         plt.gray()
         ax.get_xaxis().set_visible(False)
