@@ -13,47 +13,105 @@ class AutoEncoder(ks.models.Model):
     Auto-encoder class for encoding images as low-dimensional representations.
     """
 
-    def __init__(self, latent_dim, image_size):
+    def __init__(self,
+                 latent_dim,
+                 image_size,
+                 file_name="./model_encoder/verification_model",
+                 retrain=False):
         super(AutoEncoder, self).__init__()
         self.latent_dim = latent_dim
         self.image_size = image_size
+        self.file_name = file_name
+        self.retrain = retrain
+
         self.encoder = ks.Sequential([
+            ks.Input(shape=(image_size, image_size, 1)),
             ks.layers.Flatten(),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(512, activation='relu'),
+            ks.layers.Dense(32, activation='relu'),
             ks.layers.Dense(latent_dim, activation='relu'),
         ])
+        self.encoder.summary()
         self.decoder = ks.Sequential([
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Input(shape=(latent_dim)),
+            ks.layers.Dense(32, activation='relu'),
+            ks.layers.Dense(256, activation='relu'),
+            ks.layers.Dense(512, activation='relu'),
             ks.layers.Dense(image_size**2, activation='sigmoid'),
             ks.layers.Reshape((image_size, image_size))
         ])
+        self.decoder.summary()
         # self.encoder = ks.Sequential([
         #     ks.Input(shape=(image_size, image_size, 1)),
-        #     ks.layers.Conv2D(16, (3, 3), activation='relu', padding='same'),
-        #     # ks.layers.Conv2D(8, (3, 3), activation='relu', padding='same'),
+        #     ks.layers.Conv2D(8, (3, 3),
+        #                      activation='relu',
+        #                      padding='same',
+        #                      strides=2),
+        #     ks.layers.Dropout(0.25),
+        #     ks.layers.Conv2D(4, (3, 3),
+        #                      activation='relu',
+        #                      padding='same',
+        #                      strides=2),
+        #     ks.layers.Dropout(0.25),
         #     ks.layers.Flatten(),
         #     ks.layers.Dense(latent_dim, activation='relu'),
         # ])
+        # self.encoder.summary()
         # self.decoder = ks.Sequential([
+        #     ks.Input(shape=(latent_dim)),
         #     ks.layers.Dense(image_size**2, activation='relu'),
         #     ks.layers.Reshape((image_size, image_size, 1)),
-        #     # ks.layers.Conv2DTranspose(8,
-        #     #                           kernel_size=3,
-        #     #                           activation='relu',
-        #     #                           padding='same'),
-        #     ks.layers.Conv2DTranspose(16,
+        #     ks.layers.Conv2DTranspose(4,
         #                               kernel_size=3,
         #                               activation='relu',
         #                               padding='same'),
+        #     ks.layers.Dropout(0.25),
+        #     ks.layers.Conv2DTranspose(8,
+        #                               kernel_size=3,
+        #                               activation='relu',
+        #                               padding='same'),
+        #     ks.layers.Dropout(0.25),
         #     ks.layers.Conv2D(1,
         #                      kernel_size=(3, 3),
         #                      activation='sigmoid',
-        #                      padding='same'),
+        #                      padding='same')
         # ])
+        self.done_training = self.load_all_weights()
+
+    def load_all_weights(self):
+        """
+        Load weights
+        """
+        # noinspection PyBroadException
+        if self.retrain:
+            return False
+        try:
+            self.load_weights(filepath=self.file_name)
+            # print(f"Read model from file, so I do not retrain")
+            done_training = True
+        except:  # pylint: disable=bare-except
+            print(
+                "Could not read weights for verification_net from file. Must retrain..."
+            )
+            done_training = False
+
+        return done_training
+
+    def train(self, x_train, epochs, batch_size, shuffle, validation_data):
+        """
+        Train the auto-encoder
+        """
+        self.done_training = self.load_all_weights()
+
+        if not self.done_training or self.retrain:
+            self.fit(x_train,
+                     x_train,
+                     epochs=epochs,
+                     batch_size=batch_size,
+                     shuffle=shuffle,
+                     validation_data=validation_data)
+            self.save_weights(filepath=self.file_name)
+            self.done_training = True
 
     def call(self, x_input):
         """
@@ -76,33 +134,33 @@ def main():
     # "Translate": Only look at "red" channel;
     # only use the last digit. Use one-hot for labels during training
     x_train = x_train[:, :, :, [0]]
-    y_train = ks.utils.to_categorical((y_train % 10).astype(np.int), 10)
     x_test = x_test[:, :, :, [0]]
-    y_test = ks.utils.to_categorical((y_test % 10).astype(np.int), 10)
 
     net = VerificationNet(force_learn=False)
     net.train(generator=gen, epochs=5)
 
-    latent_dim = 2
-    epochs = 20
+    latent_dim = 5
+    epochs = 30
     image_size = 28
+    retrain = False
 
-    auto_encoder = AutoEncoder(latent_dim, image_size)
+    auto_encoder = AutoEncoder(latent_dim, image_size, retrain=retrain)
     auto_encoder.compile(
         optimizer='adam',
         loss=ks.losses.BinaryCrossentropy(),
         # loss=ks.losses.MeanSquaredError()
         #  loss=ks.losses.categorical_crossentropy
     )
-    auto_encoder.fit(x_train,
-                     x_train,
-                     epochs=epochs,
-                     batch_size=1024,
-                     shuffle=True,
-                     validation_data=(x_test, x_test))
+    auto_encoder.train(x_train,
+                       epochs=epochs,
+                       batch_size=1024,
+                       shuffle=True,
+                       validation_data=(x_test, x_test))
 
     encoded_imgs = auto_encoder.encoder(x_test).numpy()
     decoded_imgs = auto_encoder.decoder(encoded_imgs).numpy()
+
+    print(y_test[:20])
 
     n = 20
     plt.figure(figsize=(20, 4))
@@ -123,6 +181,32 @@ def main():
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     plt.show()
+
+    z = np.random.randn(20, latent_dim)
+    generated = auto_encoder.decoder(z).numpy()
+    n = 20
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        # Display generative
+        ax = plt.subplot(2, n, i + 1 + n)
+        plt.imshow(generated[i])
+        plt.title(i + 1)
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.show()
+
+    # Send through verification net
+    shape = decoded_imgs.shape
+
+    cov = net.check_class_coverage(
+        decoded_imgs.reshape(shape[0], shape[1], shape[2], 1))
+    pred, acc = net.check_predictability(
+        decoded_imgs.reshape(shape[0], shape[1], shape[2], 1), y_test)
+
+    print(f"Coverage: {100*cov:.2f}%")
+    print(f"Predictability: {100*pred:.2f}%")
+    print(f"Accuracy: {100 * acc:.2f}%")
 
 
 if __name__ == "__main__":
