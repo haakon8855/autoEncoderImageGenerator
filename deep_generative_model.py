@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from tensorflow import keras as ks
 
 from auto_encoder import AutoEncoder
+from var_auto_encoder import VariationalAutoEncoder
 from verification_net import VerificationNet
 from stacked_mnist import StackedMNISTData, DataMode
 
@@ -32,11 +33,16 @@ class DeepGenerativeModel:
         self.number_to_generate = 400
         self.generated_to_display = 20
 
-        self.ae_weights_file_name = "./model_ae_std/verification_model"
-        if self.run_anomaly_detection:
-            self.ae_weights_file_name = "./model_ae_anom/verification_model"
+        model_identifier = "ae"
         if use_vae:
-            self.auto_encoder = None
+            model_identifier = "vae"
+        self.ae_weights_file_name = f"./model_{model_identifier}_std/verification_model"
+        if self.run_anomaly_detection:
+            self.ae_weights_file_name = f"./model_{model_identifier}_anom/verification_model"
+        if use_vae:
+            self.auto_encoder = VariationalAutoEncoder(self.latent_dim,
+                                                       self.image_size,
+                                                       retrain=True)
         else:
             self.auto_encoder = AutoEncoder(self.latent_dim,
                                             self.image_size,
@@ -54,6 +60,21 @@ class DeepGenerativeModel:
                                default_batch_size=2048)
         self.verification_net = VerificationNet(force_learn=False)
         self.verification_net.train(generator=gen, epochs=5)
+
+    def init_auto_encoder(self):
+        """
+        Initializes the auto encoder, either an AE or a VAE.
+        """
+        if self.use_vae:
+            # TODO: Config? What is this number?
+            optimizer = ks.optimizers.Adam(1e-4)
+            self.auto_encoder.set_optimizer(optimizer)
+            # TODO: What else, train or smth, idk...
+        else:
+            self.auto_encoder.compile(
+                optimizer='adam',
+                loss=ks.losses.BinaryCrossentropy(),
+            )
 
     def display_generated(self, images, amount_to_display):
         """
@@ -170,13 +191,7 @@ class DeepGenerativeModel:
         x_train = x_train[:, :, :, [0]]
         x_test = x_test[:, :, :, [0]]
 
-        # Initialize the auto encoder with size of latent representation,
-        # the image size along one axis, and whether to retrain the network
-        # or use the stored weights.
-        self.auto_encoder.compile(
-            optimizer='adam',
-            loss=ks.losses.BinaryCrossentropy(),
-        )
+        self.init_auto_encoder()
         # Train the network using the training data set and predefined parameters
         print("Training network")
         self.auto_encoder.train(x_train,
@@ -221,7 +236,7 @@ def main():
     """
     Main method for running the deep generative model.
     """
-    dgm = DeepGenerativeModel(use_vae=False)
+    dgm = DeepGenerativeModel(use_vae=True)
     dgm.run()
 
 
