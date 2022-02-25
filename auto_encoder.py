@@ -102,13 +102,3 @@ class AutoEncoder(ks.models.Model):
                                   np.newaxis][i, :, :, :][np.newaxis, :, :, :]
             loss.append(self.evaluate(x_true, x_pred, verbose=0))
         return loss
-
-
-def main():
-    """
-    Main function for running the auto encoder.
-    """
-
-
-if __name__ == "__main__":
-    main()
