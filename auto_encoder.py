@@ -1,11 +1,7 @@
 """haakon8855"""
 
 import numpy as np
-import matplotlib.pyplot as plt
 from tensorflow import keras as ks
-
-from verification_net import VerificationNet
-from stacked_mnist import StackedMNISTData, DataMode
 
 
 class AutoEncoder(ks.models.Model):
