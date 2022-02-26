@@ -3,6 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras as ks
+from time import time
 
 
 class VariationalAutoEncoder(ks.models.Model):
@@ -55,9 +56,9 @@ class VariationalAutoEncoder(ks.models.Model):
                                       kernel_size=3,
                                       strides=1,
                                       padding='same'),
-            ks.layers.Reshape((image_size, image_size))
+            # ks.layers.Reshape((image_size, image_size, 1))
         ])
-        self.optimizer = ks.optimizers.Adam(1e-4)
+        self.optimizer = ks.optimizers.Adam(1e-3)
         self.decoder.summary()
         self.done_training = self.load_all_weights()
 
@@ -70,7 +71,7 @@ class VariationalAutoEncoder(ks.models.Model):
             return False
         try:
             self.load_weights(filepath=self.file_name)
-            # print(f"Read model from file, so I do not retrain")
+            print("Loaded model from file")
             done_training = True
         except:  # pylint: disable=bare-except
             print(
@@ -86,6 +87,7 @@ class VariationalAutoEncoder(ks.models.Model):
         """
         self.optimizer = optimizer
 
+    @tf.function
     def sample(self, epsilon=None):
         """
         Runs a latent representation through the decoder.
@@ -143,6 +145,7 @@ class VariationalAutoEncoder(ks.models.Model):
         logqz_x = VariationalAutoEncoder.log_normal_pdf(z_latent, mean, logvar)
         return -tf.reduce_mean(logpx_z + logpz - logqz_x)
 
+    @tf.function
     def train_one_step(self, x_input):
         """
         Runs one training step and returns the resulting loss.
@@ -153,10 +156,36 @@ class VariationalAutoEncoder(ks.models.Model):
         self.optimizer.apply_gradients(zip(gradients,
                                            self.trainable_variables))
 
-    def train(self, x_train, epochs, batch_size, shuffle, validation_data):
+    def train(self, x_train, epochs, batch_size, shuffle, x_test):
         """
         Trains the VAE
         """
-        epochs = 1  # TODO: remove
-        for i, case in enumerate(x_train):
-            self.train_one_step(x_train[i])
+        self.done_training = self.load_all_weights()
+        epochs = 1
+
+        if not self.done_training or self.retrain or True:
+            for j in range(epochs):
+                start_time = time()
+                for i, case in enumerate(x_train):
+                    if i % 1000 == 0:
+                        print(i)
+                    self.train_one_step(
+                        case[np.newaxis, :, :, :].astype('float32'))
+                end_time = time()
+
+                loss = tf.keras.metrics.Mean()
+                for i, case in enumerate(x_test):
+                    if i % 1000 == 0:
+                        print(i)
+                    loss(
+                        self.compute_loss(
+                            case[np.newaxis, :, :, :].astype('float32')))
+                elbo = -loss.result()
+                # display.clear_output(wait=False)
+                print(
+                    f'Epoch: {j}, Test set ELBO: {elbo}, time elapse for current epoch: {end_time - start_time}'
+                )
+
+            self.save_weights(filepath=self.file_name)
+            print("Saved weights to file")
+            self.done_training = True

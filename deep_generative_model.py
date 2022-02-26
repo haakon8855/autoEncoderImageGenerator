@@ -36,13 +36,17 @@ class DeepGenerativeModel:
         model_identifier = "ae"
         if use_vae:
             model_identifier = "vae"
+            self.epochs = 10
+            self.latent_dim = 2
+
+        # Set path for storing and loading trained network weights
         self.ae_weights_file_name = f"./model_{model_identifier}_std/verification_model"
         if self.run_anomaly_detection:
             self.ae_weights_file_name = f"./model_{model_identifier}_anom/verification_model"
         if use_vae:
             self.auto_encoder = VariationalAutoEncoder(self.latent_dim,
                                                        self.image_size,
-                                                       retrain=True)
+                                                       retrain=self.retrain)
         else:
             self.auto_encoder = AutoEncoder(self.latent_dim,
                                             self.image_size,
@@ -169,6 +173,11 @@ class DeepGenerativeModel:
         """
         Run images through encoder and decoder
         """
+        if self.use_vae:
+            mean, logvar = self.auto_encoder.encode(x_test)
+            z_latent = self.auto_encoder.reparameterize(mean, logvar)
+            x_logit = self.auto_encoder.decode(z_latent, True).numpy()
+            return x_logit
         encoded_imgs = self.auto_encoder.encoder(x_test).numpy()
         decoded_imgs = self.auto_encoder.decoder(encoded_imgs).numpy()
         return decoded_imgs
@@ -198,7 +207,7 @@ class DeepGenerativeModel:
                                 epochs=self.epochs,
                                 batch_size=self.batch_size,
                                 shuffle=True,
-                                validation_data=(x_test, x_test))
+                                x_test=x_test)
 
         if self.run_anomaly_detection:
             decoded_imgs = self.detect_anomalies()

@@ -58,19 +58,18 @@ class AutoEncoder(ks.models.Model):
 
         return done_training
 
-    def train(self, x_train, epochs, batch_size, shuffle, validation_data):
+    def train(self, x_train, epochs, batch_size, shuffle, x_test):
         """
         Train the auto-encoder
         """
         self.done_training = self.load_all_weights()
-
         if not self.done_training or self.retrain:
             self.fit(x_train,
                      x_train,
                      epochs=epochs,
                      batch_size=batch_size,
                      shuffle=shuffle,
-                     validation_data=validation_data)
+                     validation_data=(x_test, x_test))
             self.save_weights(filepath=self.file_name)
             self.done_training = True
 
