@@ -1,9 +1,9 @@
 """haakon8855"""
 
+from time import time
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras as ks
-from time import time
 
 
 class VariationalAutoEncoder(ks.models.Model):
@@ -131,6 +131,7 @@ class VariationalAutoEncoder(ks.models.Model):
             -0.5 * ((sample - mean)**2.0 * tf.exp(-logvar) + logvar + log2pi),
             axis=raxis)
 
+    @tf.function
     def compute_loss(self, x_input):
         """
         Computes the ELBO loss using Monte Carlo
@@ -161,7 +162,7 @@ class VariationalAutoEncoder(ks.models.Model):
         Trains the VAE
         """
         self.done_training = self.load_all_weights()
-        epochs = 1
+        epochs = 5
 
         if not self.done_training or self.retrain or True:
             for j in range(epochs):

@@ -70,8 +70,8 @@ class DeepGenerativeModel:
         Initializes the auto encoder, either an AE or a VAE.
         """
         if self.use_vae:
-            # TODO: Config? What is this number?
-            optimizer = ks.optimizers.Adam(1e-4)
+            # TODO: Config? What is this number? Think its learning rate
+            optimizer = ks.optimizers.Adam(1e-3)
             self.auto_encoder.set_optimizer(optimizer)
             # TODO: What else, train or smth, idk...
         else:
