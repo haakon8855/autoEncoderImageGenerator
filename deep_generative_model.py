@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from tensorflow import keras as ks
 
 from auto_encoder import AutoEncoder
@@ -36,8 +37,8 @@ class DeepGenerativeModel:
         model_identifier = "ae"
         if use_vae:
             model_identifier = "vae"
-            self.epochs = 10
-            self.latent_dim = 2
+            self.epochs = 100
+            self.latent_dim = 3
 
         # Set path for storing and loading trained network weights
         self.ae_weights_file_name = f"./model_{model_identifier}_std/verification_model"
@@ -71,8 +72,12 @@ class DeepGenerativeModel:
         """
         if self.use_vae:
             # TODO: Config? What is this number? Think its learning rate
-            optimizer = ks.optimizers.Adam(1e-3)
-            self.auto_encoder.set_optimizer(optimizer)
+            # optimizer = ks.optimizers.Adam(1e-3)
+            # self.auto_encoder.set_optimizer(optimizer)
+            self.auto_encoder.compile(
+                optimizer=tf.optimizers.Adam(learning_rate=1e-3),
+                loss=VariationalAutoEncoder.loss,
+            )
             # TODO: What else, train or smth, idk...
         else:
             self.auto_encoder.compile(
@@ -173,11 +178,16 @@ class DeepGenerativeModel:
         """
         Run images through encoder and decoder
         """
+        # if self.use_vae:
+        #     mean, logvar = self.auto_encoder.encode(x_test)
+        #     z_latent = self.auto_encoder.reparameterize(mean, logvar)
+        #     x_logit = self.auto_encoder.decode(z_latent, True).numpy()
+        #     return x_logit
         if self.use_vae:
-            mean, logvar = self.auto_encoder.encode(x_test)
-            z_latent = self.auto_encoder.reparameterize(mean, logvar)
-            x_logit = self.auto_encoder.decode(z_latent, True).numpy()
-            return x_logit
+            encoded_imgs = self.auto_encoder.encoder(x_test)
+            decoded_imgs = np.array(
+                self.auto_encoder.decoder(encoded_imgs).mode())
+            return decoded_imgs
         encoded_imgs = self.auto_encoder.encoder(x_test).numpy()
         decoded_imgs = self.auto_encoder.decoder(encoded_imgs).numpy()
         return decoded_imgs
