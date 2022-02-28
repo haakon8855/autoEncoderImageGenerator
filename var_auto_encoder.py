@@ -41,6 +41,8 @@ class VariationalAutoEncoder(ks.models.Model):
             ks.Input(shape=(image_size, image_size, 1)),
             ks.layers.Flatten(),
             ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(300, activation='relu'),
             ks.layers.Dense(40, activation='relu'),
             ks.layers.Dense(tfp.layers.MultivariateNormalTriL.params_size(
                 self.latent_dim),
@@ -72,6 +74,7 @@ class VariationalAutoEncoder(ks.models.Model):
             ks.layers.Dense(40, activation='relu'),
             ks.layers.Dense(250, activation='relu'),
             ks.layers.Dense(400, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
             ks.layers.Dense(500, activation='relu'),
             ks.layers.Dense(image_size**2),
             tfp.layers.IndependentBernoulli(
