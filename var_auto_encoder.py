@@ -1,7 +1,5 @@
 """haakon8855"""
 
-from time import time
-import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow import keras as ks
@@ -28,16 +26,6 @@ class VariationalAutoEncoder(ks.models.Model):
                                                    reinterpreted_batch_ndims=1)
 
         self.encoder = ks.Sequential([
-            # ks.layers.InputLayer(input_shape=(image_size, image_size, 1)),
-            # ks.layers.Conv2D(32,
-            #                  kernel_size=3,
-            #                  strides=(2, 2),
-            #                  activation='leaky_relu'),
-            # ks.layers.Conv2D(64,
-            #                  kernel_size=3,
-            #                  strides=(2, 2),
-            #                  activation='leaky_relu'),
-            # ks.layers.Flatten(),
             ks.Input(shape=(image_size, image_size, 1)),
             ks.layers.Flatten(),
             ks.layers.Dense(500, activation='relu'),
@@ -55,21 +43,6 @@ class VariationalAutoEncoder(ks.models.Model):
         self.encoder.summary()
 
         self.decoder = ks.Sequential([
-            # ks.layers.InputLayer(input_shape=(latent_dim)),
-            # ks.layers.Dense(7 * 7 * 32, activation='leaky_relu'),
-            # ks.layers.Reshape((7, 7, 32)),
-            # ks.layers.Conv2DTranspose(64,
-            #                           kernel_size=3,
-            #                           strides=2,
-            #                           padding='same',
-            #                           activation='leaky_relu'),
-            # ks.layers.Conv2DTranspose(32,
-            #                           kernel_size=3,
-            #                           strides=2,
-            #                           padding='same',
-            #                           activation='leaky_relu'),
-            # ks.layers.Conv2D(1, kernel_size=3, strides=1, padding='same'),
-            # ks.layers.Flatten(),
             ks.layers.Input(shape=(latent_dim)),
             ks.layers.Dense(40, activation='relu'),
             ks.layers.Dense(250, activation='relu'),
@@ -89,7 +62,6 @@ class VariationalAutoEncoder(ks.models.Model):
         """
         Load weights
         """
-        # noinspection PyBroadException
         if self.retrain:
             return False
         try:
@@ -97,9 +69,7 @@ class VariationalAutoEncoder(ks.models.Model):
             print("Loaded model from file")
             done_training = True
         except:  # pylint: disable=bare-except
-            print(
-                "Could not read weights for verification_net from file. Must retrain..."
-            )
+            print("Could not read weights from file. Must retrain")
             done_training = False
 
         return done_training
@@ -134,32 +104,10 @@ class VariationalAutoEncoder(ks.models.Model):
             self.save_weights(filepath=self.file_name)
             self.done_training = True
 
-        # self.done_training = self.load_all_weights()
-        # epochs = 5
-
-        # if not self.done_training or self.retrain or True:
-        #     for j in range(epochs):
-        #         start_time = time()
-        #         for i, case in enumerate(x_train):
-        #             if i % 1000 == 0:
-        #                 print(i)
-        #             self.train_one_step(
-        #                 case[np.newaxis, :, :, :].astype('float32'))
-        #         end_time = time()
-
-        #         loss = tf.keras.metrics.Mean()
-        #         for i, case in enumerate(x_test):
-        #             if i % 1000 == 0:
-        #                 print(i)
-        #             loss(
-        #                 self.compute_loss(
-        #                     case[np.newaxis, :, :, :].astype('float32')))
-        #         elbo = -loss.result()
-        #         # display.clear_output(wait=False)
-        #         print(
-        #             f'Epoch: {j}, Test set ELBO: {elbo}, time elapse for current epoch: {end_time - start_time}'
-        #         )
-
-        #     self.save_weights(filepath=self.file_name)
-        #     print("Saved weights to file")
-        #     self.done_training = True
+    def generate_images(self, number_to_generate):
+        """
+        Generate a number of images by generating random vectors in the latent
+        vector space and feeding them through the decoder.
+        """
+        latent_vectors = self.prior.sample(number_to_generate)
+        return self.decoder(latent_vectors).mean()
