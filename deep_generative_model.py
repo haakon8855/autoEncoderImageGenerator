@@ -19,10 +19,10 @@ class DeepGenerativeModel:
     def __init__(self, use_vae=False):
         self.use_vae = use_vae
         self.latent_dim = 5
-        self.epochs = 30
+        self.epochs = 150
         self.image_size = 28
         self.retrain = False
-        self.run_anomaly_detection = False
+        self.run_anomaly_detection = True
         self.batch_size = 1024
         # Anomaly detection
         self.check_for_anomalies = 1000
@@ -45,13 +45,17 @@ class DeepGenerativeModel:
         if self.run_anomaly_detection:
             self.ae_weights_file_name = f"./model_{model_identifier}_anom/verification_model"
         if use_vae:
-            self.auto_encoder = VariationalAutoEncoder(self.latent_dim,
-                                                       self.image_size,
-                                                       retrain=self.retrain)
+            self.auto_encoder = VariationalAutoEncoder(
+                self.latent_dim,
+                self.image_size,
+                file_name=self.ae_weights_file_name,
+                retrain=self.retrain)
         else:
-            self.auto_encoder = AutoEncoder(self.latent_dim,
-                                            self.image_size,
-                                            retrain=self.retrain)
+            self.auto_encoder = AutoEncoder(
+                self.latent_dim,
+                self.image_size,
+                file_name=self.ae_weights_file_name,
+                retrain=self.retrain)
 
         self.verification_net = None
         self.init_verification_net()
@@ -77,7 +81,7 @@ class DeepGenerativeModel:
             )
         else:
             self.auto_encoder.compile(
-                optimizer='adam',
+                optimizer=tf.optimizers.Adam(learning_rate=1e-3),
                 loss=ks.losses.BinaryCrossentropy(),
             )
 
@@ -132,7 +136,7 @@ class DeepGenerativeModel:
         the test set.
         """
         largest_loss = np.argpartition(loss, -num_anom)[-num_anom:]
-        plt.figure(figsize=(num_anom, num_anom))
+        plt.figure(figsize=(int(num_anom * 0.8), 2))
         for i in range(num_anom):
             # Display original
             axs = plt.subplot(2, num_anom, i + 1)
@@ -243,6 +247,8 @@ class DeepGenerativeModel:
         print(f"Accuracy: {100 * acc:.2f}%")
 
         generated_imgs = self.generate_images()[:, :, :, np.newaxis]
+        if self.use_vae:
+            generated_imgs = generated_imgs.numpy()
         # gen_cov = self.verification_net
         gen_cov = self.verification_net.check_class_coverage(generated_imgs)
         gen_pred, _ = self.verification_net.check_predictability(
@@ -255,7 +261,7 @@ def main():
     """
     Main method for running the deep generative model.
     """
-    dgm = DeepGenerativeModel(use_vae=True)
+    dgm = DeepGenerativeModel(use_vae=False)
     dgm.run()
 
 

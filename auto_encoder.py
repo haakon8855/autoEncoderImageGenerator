@@ -23,16 +23,20 @@ class AutoEncoder(ks.models.Model):
         self.encoder = ks.Sequential([
             ks.Input(shape=(image_size, image_size, 1)),
             ks.layers.Flatten(),
-            ks.layers.Dense(512, activation='relu'),
-            ks.layers.Dense(32, activation='relu'),
+            ks.layers.Dense(600, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(40, activation='relu'),
+            ks.layers.Dense(15, activation='relu'),
             ks.layers.Dense(latent_dim, activation='relu'),
         ])
         self.encoder.summary()
         self.decoder = ks.Sequential([
             ks.layers.Input(shape=(latent_dim)),
-            ks.layers.Dense(32, activation='relu'),
-            ks.layers.Dense(256, activation='relu'),
-            ks.layers.Dense(512, activation='relu'),
+            ks.layers.Dense(15, activation='relu'),
+            ks.layers.Dense(40, activation='relu'),
+            ks.layers.Dense(400, activation='relu'),
+            ks.layers.Dense(500, activation='relu'),
+            ks.layers.Dense(600, activation='relu'),
             ks.layers.Dense(image_size**2, activation='sigmoid'),
             ks.layers.Reshape((image_size, image_size))
         ])
