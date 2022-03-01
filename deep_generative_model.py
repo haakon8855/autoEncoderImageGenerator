@@ -130,23 +130,25 @@ class DeepGenerativeModel:
                     plt.show()
                     return
 
-    def display_anomalies(self, num_anom: int, x_test, x_pred, loss):
+    def display_anomalies(self,
+                          num_anom: int,
+                          x_test,
+                          x_pred,
+                          loss_prob,
+                          use_prob: bool = False):
         """
         Display the num_anom most anomalous image reconstructions found in
         the test set.
         """
-        largest_loss = np.argpartition(loss, -num_anom)[-num_anom:]
+        if use_prob:
+            indices = np.argpartition(loss_prob, num_anom)[:num_anom]
+        else:
+            indices = np.argpartition(loss_prob, -num_anom)[-num_anom:]
         plt.figure(figsize=(int(num_anom * 0.8), 2))
         for i in range(num_anom):
             # Display original
             axs = plt.subplot(2, num_anom, i + 1)
-            plt.imshow(x_test[largest_loss[i]])
-            plt.gray()
-            axs.get_xaxis().set_visible(False)
-            axs.get_yaxis().set_visible(False)
-            # Display most loss
-            axs = plt.subplot(2, num_anom, i + num_anom + 1)
-            plt.imshow(x_pred[largest_loss[i]])
+            plt.imshow(x_test[indices[i]])
             plt.gray()
             axs.get_xaxis().set_visible(False)
             axs.get_yaxis().set_visible(False)
@@ -164,15 +166,23 @@ class DeepGenerativeModel:
         # Only look at one channel:
         x_test = x_test[:, :, :, [0]]
 
-        decoded_imgs = self.call(x_test)
-
         print("Checking for anomalies")
-        loss = self.auto_encoder.measure_loss(
-            x_test, decoded_imgs, check_range=self.check_for_anomalies)
         # Display the k_anomalies images with the most loss for
         # first 'check_for_anomalies' (e.g. 1000) samples of test set.
-        self.display_anomalies(self.k_anomalies, x_test, decoded_imgs, loss)
-        return decoded_imgs
+        if self.use_vae:
+            prob = self.auto_encoder.measure_loss(
+                x_test, None, check_range=self.check_for_anomalies)
+            self.display_anomalies(self.k_anomalies,
+                                   x_test,
+                                   None,
+                                   prob,
+                                   use_prob=True)
+        else:
+            decoded_imgs = self.call(x_test)
+            loss = self.auto_encoder.measure_loss(x_test, decoded_imgs,
+                                                  self.check_for_anomalies)
+            self.display_anomalies(self.k_anomalies, x_test, decoded_imgs,
+                                   loss)
 
     def generate_images(self):
         """
@@ -224,7 +234,7 @@ class DeepGenerativeModel:
                                 x_test=x_test)
 
         if self.run_anomaly_detection:
-            decoded_imgs = self.detect_anomalies()
+            self.detect_anomalies()
             return
 
         decoded_imgs = self.call(x_test)
@@ -261,7 +271,8 @@ def main():
     """
     Main method for running the deep generative model.
     """
-    dgm = DeepGenerativeModel(use_vae=False)
+    tf.get_logger().setLevel('WARNING')
+    dgm = DeepGenerativeModel(use_vae=True)
     dgm.run()
 
 

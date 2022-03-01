@@ -1,5 +1,6 @@
 """haakon8855"""
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow import keras as ks
@@ -112,3 +113,20 @@ class VariationalAutoEncoder(ks.models.Model):
         """
         latent_vectors = self.prior.sample(number_to_generate)
         return self.decoder(latent_vectors).mode()
+
+    def measure_loss(self, x_test, reconstructed, check_range: int = 200):
+        """
+        Measures the loss for each test sample and returns a list of losses
+        corresponding to each sample in x_test on the same index.
+        """
+        N = 5000
+        check_range = 4000
+        generated = self.generate_images(N).numpy()
+        prob = []
+        for i in range(check_range):
+            x_input = np.repeat(x_test[[i], :, :, :], repeats=N, axis=0)
+            loss_i = tf.losses.binary_crossentropy(x_input.reshape(N, 784),
+                                                   generated.reshape(N, 784),
+                                                   axis=1)
+            prob.append(np.exp(np.array(loss_i) * -1).mean())
+        return prob

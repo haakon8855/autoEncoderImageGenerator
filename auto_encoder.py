@@ -104,5 +104,6 @@ class AutoEncoder(ks.models.Model):
             x_true = x_test[i, :, :, :][np.newaxis, :, :, :]
             x_pred = reconstruced[:, :, :,
                                   np.newaxis][i, :, :, :][np.newaxis, :, :, :]
+            # TODO: Check eval(xtrue,xtrue)
             loss.append(self.evaluate(x_true, x_pred, verbose=0))
         return loss
