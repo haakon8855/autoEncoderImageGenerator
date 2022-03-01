@@ -89,7 +89,8 @@ class VariationalAutoEncoder(ks.models.Model):
         """
         return -rv_x.log_prob(x_input)
 
-    def train(self, x_train, epochs, batch_size, shuffle, x_test):
+    def train(self, x_train, epochs: int, batch_size: int, shuffle: bool,
+              x_test):
         """
         Trains the VAE
         """
@@ -104,10 +105,10 @@ class VariationalAutoEncoder(ks.models.Model):
             self.save_weights(filepath=self.file_name)
             self.done_training = True
 
-    def generate_images(self, number_to_generate):
+    def generate_images(self, number_to_generate: int):
         """
         Generate a number of images by generating random vectors in the latent
         vector space and feeding them through the decoder.
         """
         latent_vectors = self.prior.sample(number_to_generate)
-        return self.decoder(latent_vectors).mean()
+        return self.decoder(latent_vectors).mode()

@@ -58,7 +58,8 @@ class AutoEncoder(ks.models.Model):
 
         return done_training
 
-    def train(self, x_train, epochs, batch_size, shuffle, x_test):
+    def train(self, x_train, epochs: int, batch_size: int, shuffle: bool,
+              x_test):
         """
         Train the auto-encoder
         """
@@ -81,7 +82,7 @@ class AutoEncoder(ks.models.Model):
         decoded = self.decoder(encoded)
         return decoded
 
-    def generate_images(self, number_to_generate):
+    def generate_images(self, number_to_generate: int):
         """
         Generate a number of images by generating random vectors in the latent
         vector space and feeding them through the decoder.
@@ -89,7 +90,7 @@ class AutoEncoder(ks.models.Model):
         latent_vectors = np.random.randn(number_to_generate, self.latent_dim)
         return self.decoder(latent_vectors).numpy()
 
-    def measure_loss(self, x_test, reconstruced, check_range=200):
+    def measure_loss(self, x_test, reconstruced, check_range: int = 200):
         """
         Measures the loss for each test sample and returns a list of losses
         corresponding to each sample in x_test on the same index.
