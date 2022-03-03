@@ -22,9 +22,9 @@ class VariationalAutoEncoder(ks.models.Model):
         self.file_name = file_name
         self.retrain = retrain
 
-        self.prior = tfp.distributions.Independent(tfp.distributions.Normal(
+        self.p_z = tfp.distributions.Independent(tfp.distributions.Normal(
             loc=tf.zeros(latent_dim), scale=1),
-                                                   reinterpreted_batch_ndims=1)
+                                                 reinterpreted_batch_ndims=1)
 
         self.encoder = ks.Sequential([
             ks.Input(shape=(image_size, image_size, 1)),
@@ -33,13 +33,11 @@ class VariationalAutoEncoder(ks.models.Model):
             ks.layers.Dense(500, activation='relu'),
             ks.layers.Dense(300, activation='relu'),
             ks.layers.Dense(40, activation='relu'),
-            ks.layers.Dense(tfp.layers.MultivariateNormalTriL.params_size(
-                self.latent_dim),
-                            activation=None),
+            ks.layers.Dense(self.get_mvntl_input_size(), activation=None),
             tfp.layers.MultivariateNormalTriL(
                 self.latent_dim,
                 activity_regularizer=tfp.layers.KLDivergenceRegularizer(
-                    self.prior)),
+                    self.p_z)),
         ])
         self.encoder.summary()
 
@@ -58,6 +56,12 @@ class VariationalAutoEncoder(ks.models.Model):
         self.decoder.summary()
 
         self.done_training = self.load_all_weights()
+
+    def get_mvntl_input_size(self):
+        """
+        Returns the size needed for the multivariate normal tril layer.
+        """
+        return self.latent_dim + self.latent_dim * (self.latent_dim + 1) // 2
 
     def load_all_weights(self):
         """
@@ -84,11 +88,11 @@ class VariationalAutoEncoder(ks.models.Model):
         return decoded
 
     @staticmethod
-    def loss(x_input, rv_x):
+    def loss(x_input, network_output):
         """
         Computes the elbo loss.
         """
-        return -rv_x.log_prob(x_input)
+        return -network_output.log_prob(x_input)
 
     def train(self, x_train, epochs: int, batch_size: int, shuffle: bool,
               x_test):
@@ -111,7 +115,7 @@ class VariationalAutoEncoder(ks.models.Model):
         Generate a number of images by generating random vectors in the latent
         vector space and feeding them through the decoder.
         """
-        latent_vectors = self.prior.sample(number_to_generate)
+        latent_vectors = self.p_z.sample(number_to_generate)
         return self.decoder(latent_vectors).mode()
 
     def measure_loss(self, x_test, reconstructed, check_range: int = 200):
