@@ -19,10 +19,12 @@ class DeepGenerativeModel:
     def __init__(self, use_vae=False):
         self.use_vae = use_vae
         self.latent_dim = 5
-        self.epochs = 150
+        self.epochs = 45
         self.image_size = 28
         self.retrain = False
         self.run_anomaly_detection = False
+        self.stacked_dataset = True
+        self.channels = 1
         self.batch_size = 1024
         # Anomaly detection
         self.check_for_anomalies = 1000
@@ -39,6 +41,8 @@ class DeepGenerativeModel:
             model_identifier = "vae"
             self.epochs = 100
             self.latent_dim = 3
+        if self.stacked_dataset:
+            self.channels = 3
 
         # Set path for storing and loading trained network weights
         self.ae_weights_file_name = f"./model_{model_identifier}_std/verification_model"
@@ -88,6 +92,7 @@ class DeepGenerativeModel:
     def display_reconstructions(self,
                                 x_test,
                                 x_pred,
+                                y_test,
                                 amount_to_display: int = 20,
                                 offset: int = 0):
         """
@@ -97,14 +102,20 @@ class DeepGenerativeModel:
         for i in range(amount_to_display):
             # Display original
             axs = plt.subplot(2, amount_to_display, i + 1)
-            plt.imshow(x_test[i + offset])
-            plt.title(i + 1)
+            if self.stacked_dataset:
+                plt.imshow(x_test[i + offset, :, :, :].astype(np.float64))
+            else:
+                plt.imshow(x_test[i + offset])
+            plt.title(str(y_test[i + offset]).zfill(3))
             plt.gray()
             axs.get_xaxis().set_visible(False)
             axs.get_yaxis().set_visible(False)
             # Display reconstruction
             axs = plt.subplot(2, amount_to_display, i + 1 + amount_to_display)
-            plt.imshow(x_pred[i + offset])
+            if self.stacked_dataset:
+                plt.imshow(x_pred[i + offset, :, :, :].astype(np.float64))
+            else:
+                plt.imshow(x_pred[i + offset])
             plt.gray()
             axs.get_xaxis().set_visible(False)
             axs.get_yaxis().set_visible(False)
@@ -122,7 +133,10 @@ class DeepGenerativeModel:
         for row in range(rows):
             for col in range(cols):
                 current = axs[row, col]
-                current.imshow(images[i])
+                if self.stacked_dataset:
+                    current.imshow(images[i, :, :, :].astype(np.float64))
+                else:
+                    current.imshow(images[i])
                 current.get_xaxis().set_visible(False)
                 current.get_yaxis().set_visible(False)
                 i += 1
@@ -186,7 +200,11 @@ class DeepGenerativeModel:
         Generate random vectors in the latent vector-space
         and feed them through the decoder.
         """
-        generated = self.auto_encoder.generate_images(self.number_to_generate)
+        generated = []
+        for _ in range(self.channels):
+            generated.append(
+                self.auto_encoder.generate_images(self.number_to_generate))
+        generated = np.moveaxis(np.array(generated), 0, -1)
         self.display_generated(generated, self.generated_to_display)
         return generated
 
@@ -201,62 +219,86 @@ class DeepGenerativeModel:
             return decoded_imgs
         encoded_imgs = self.auto_encoder.encoder(x_test).numpy()
         decoded_imgs = self.auto_encoder.decoder(encoded_imgs).numpy()
-        return decoded_imgs
+        out = decoded_imgs
+        out = np.heaviside(decoded_imgs - 0.38, 1)
+        return out
 
     def run(self):
         """
         Runs the auto encoder.
         """
         # Set up data set generators/fetchers
-        data_mode = DataMode.MONO_BINARY_COMPLETE
-        if self.run_anomaly_detection:
+        if not self.run_anomaly_detection and not self.stacked_dataset:
+            data_mode = DataMode.MONO_BINARY_COMPLETE
+        elif self.run_anomaly_detection and not self.stacked_dataset:
             data_mode = DataMode.MONO_BINARY_MISSING
+        elif not self.run_anomaly_detection and self.stacked_dataset:
+            data_mode = DataMode.COLOR_BINARY_COMPLETE
+        else:
+            data_mode = DataMode.COLOR_BINARY_MISSING
+
         gen_train = StackedMNISTData(mode=data_mode, default_batch_size=2048)
         gen_test = StackedMNISTData(mode=data_mode, default_batch_size=2048)
 
         # Fetch training and test data sets
         x_train, _ = gen_train.get_full_data_set(training=True)
         x_test, y_test = gen_test.get_full_data_set(training=False)
-        # Only look at one channel:
-        x_train = x_train[:, :, :, [0]]
-        x_test = x_test[:, :, :, [0]]
+
+        # # Only look at one channel:
+        # x_train = x_train[:, :, :, [0]]
+        # x_test = x_test[:, :, :, [0]]
 
         self.init_auto_encoder()
         # Train the network using the training data set and predefined parameters
         print("Training network")
-        self.auto_encoder.train(x_train,
-                                epochs=self.epochs,
-                                batch_size=self.batch_size,
-                                shuffle=True,
-                                x_test=x_test)
+        self.auto_encoder.train(
+            x_train[:, :, :, [0]],  # Only train on one color channel
+            epochs=self.epochs,
+            batch_size=self.batch_size,
+            shuffle=True,
+            x_test=x_test[:, :, :, [0]])
 
         if self.run_anomaly_detection:
             self.detect_anomalies()
             return
 
-        decoded_imgs = self.call(x_test)
+        decoded_imgs = []
+        for channel in range(x_test.shape[3]):
+            decoded_imgs.append(self.call(x_test[:, :, :, [channel]]))
+        decoded_imgs = np.moveaxis(np.array(decoded_imgs), 0, -1)
         print(y_test[self.display_offset:self.number_of_reconstructions +
                      self.display_offset])
-        self.display_reconstructions(x_test, decoded_imgs,
-                                     self.number_of_reconstructions,
-                                     self.display_offset)
 
         # VERIFICATION
         # Send reconstructed images through the verification net,
         # check coverage, predictability and accuracy for the reconstructed
         # original images.
-        reconstructed = decoded_imgs[:, :, :, np.newaxis]
+        if self.stacked_dataset:
+            reconstructed = decoded_imgs
+            tolerance = 0.5  # Accuracy tolerance
+        else:
+            reconstructed = decoded_imgs[:, :, :, np.newaxis]
+            tolerance = 0.8  # Accuracy tolerance
         cov = self.verification_net.check_class_coverage(reconstructed)
         pred, acc = self.verification_net.check_predictability(
-            reconstructed, y_test)
+            reconstructed, y_test, tolerance=tolerance)
+        predorig, accorig = self.verification_net.check_predictability(
+            x_test, y_test, tolerance=tolerance)
         print(f"Coverage: {100*cov:.2f}%")
         print(f"Predictability: {100*pred:.2f}%")
         print(f"Accuracy: {100 * acc:.2f}%")
+        print(f"Predictabilityorig: {100*predorig:.2f}%")
+        print(f"Accuracyorig: {100 * accorig:.2f}%")
+        self.display_reconstructions(x_test, decoded_imgs, y_test,
+                                     self.number_of_reconstructions,
+                                     self.display_offset)
 
-        generated_imgs = self.generate_images()[:, :, :, np.newaxis]
+        generated_imgs = self.generate_images()
+        if not self.stacked_dataset:
+            generated_imgs = generated_imgs[:, :, :, np.newaxis]
         if self.use_vae:
             generated_imgs = generated_imgs.numpy()
-        # gen_cov = self.verification_net
+
         gen_cov = self.verification_net.check_class_coverage(generated_imgs)
         gen_pred, _ = self.verification_net.check_predictability(
             generated_imgs)

@@ -35,12 +35,12 @@ class VerificationNet:
             model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(128, activation='relu'))
+        model.add(Dense(150, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(10, activation='softmax'))
 
         model.compile(loss=keras.losses.categorical_crossentropy,
-                      optimizer=keras.optimizers.Adam(learning_rate=0.01),
+                      optimizer=keras.optimizers.Adam(learning_rate=0.02),
                       metrics=['accuracy'])
 
         self.model = model
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     gen = StackedMNISTData(mode=DataMode.MONO_BINARY_COMPLETE,
                            default_batch_size=2048)
     net = VerificationNet(force_learn=False)
-    net.train(generator=gen, epochs=5)
+    net.train(generator=gen, epochs=20)
 
     # I have no data generator (VAE or whatever) here, so just use a sampled set
     img, labels = gen.get_random_batch(training=True, batch_size=25000)
