@@ -97,16 +97,16 @@ class AutoEncoder(ks.models.Model):
         latent_vectors = np.random.randn(number_to_generate, self.latent_dim)
         return self.decoder(latent_vectors).numpy()
 
-    def measure_loss(self, x_test, reconstruced, check_range: int = 200):
+    def measure_loss(self, x_test, check_range: int = 1000):
         """
         Measures the loss for each test sample and returns a list of losses
         corresponding to each sample in x_test on the same index.
         """
         loss = []
         for i in range(check_range):
-            x_true = x_test[i, :, :, :][np.newaxis, :, :, :]
-            x_pred = reconstruced[:, :, :,
-                                  np.newaxis][i, :, :, :][np.newaxis, :, :, :]
-            # TODO: Check eval(xtrue,xtrue)
-            loss.append(self.evaluate(x_true, x_pred, verbose=0))
+            loss_i = 0
+            for channel in range(x_test.shape[3]):
+                x_true = x_test[[i], :, :, [channel]]
+                loss_i += self.evaluate(x_true, x_true, verbose=0)
+            loss.append(loss_i)
         return loss
