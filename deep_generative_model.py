@@ -133,7 +133,6 @@ class DeepGenerativeModel:
     def display_anomalies(self,
                           num_anom: int,
                           x_test,
-                          x_pred,
                           loss_prob,
                           use_prob: bool = False):
         """
@@ -170,19 +169,17 @@ class DeepGenerativeModel:
         # Display the k_anomalies images with the most loss for
         # first 'check_for_anomalies' (e.g. 1000) samples of test set.
         if self.use_vae:
-            prob = self.auto_encoder.measure_loss(
-                x_test, None, check_range=self.check_for_anomalies)
+            prob = self.auto_encoder.measure_loss_by_sampling(
+                x_test, check_range=self.check_for_anomalies)
             self.display_anomalies(self.k_anomalies,
                                    x_test,
-                                   None,
                                    prob,
                                    use_prob=True)
         else:
             decoded_imgs = self.call(x_test)
             loss = self.auto_encoder.measure_loss(x_test, decoded_imgs,
                                                   self.check_for_anomalies)
-            self.display_anomalies(self.k_anomalies, x_test, decoded_imgs,
-                                   loss)
+            self.display_anomalies(self.k_anomalies, x_test, loss)
 
     def generate_images(self):
         """

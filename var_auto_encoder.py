@@ -90,7 +90,7 @@ class VariationalAutoEncoder(ks.models.Model):
     @staticmethod
     def loss(x_input, network_output):
         """
-        Computes the elbo loss.
+        Computes the elbo loss. p(x|z)
         """
         return -network_output.log_prob(x_input)
 
@@ -118,7 +118,7 @@ class VariationalAutoEncoder(ks.models.Model):
         latent_vectors = self.p_z.sample(number_to_generate)
         return self.decoder(latent_vectors).mode()
 
-    def measure_loss(self, x_test, reconstructed, check_range: int = 200):
+    def measure_loss_by_sampling(self, x_test, check_range: int = 200):
         """
         Measures the loss for each test sample and returns a list of losses
         corresponding to each sample in x_test on the same index.
