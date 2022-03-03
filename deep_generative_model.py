@@ -22,7 +22,7 @@ class DeepGenerativeModel:
         self.epochs = 150
         self.image_size = 28
         self.retrain = False
-        self.run_anomaly_detection = True
+        self.run_anomaly_detection = False
         self.batch_size = 1024
         # Anomaly detection
         self.check_for_anomalies = 1000
@@ -269,7 +269,7 @@ def main():
     Main method for running the deep generative model.
     """
     tf.get_logger().setLevel('WARNING')
-    dgm = DeepGenerativeModel(use_vae=True)
+    dgm = DeepGenerativeModel(use_vae=False)
     dgm.run()
 
 
