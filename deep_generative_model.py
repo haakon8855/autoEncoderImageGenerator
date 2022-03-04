@@ -16,14 +16,14 @@ class DeepGenerativeModel:
     Run the deep generative model
     """
 
-    def __init__(self, use_vae=False):
-        self.use_vae = use_vae
+    def __init__(self):
+        self.use_vae = False
         self.latent_dim = 5
         self.epochs = 45
         self.image_size = 28
         self.retrain = False
         self.run_anomaly_detection = False
-        self.stacked_dataset = True
+        self.stacked_dataset = False
         self.channels = 1
         self.batch_size = 1024
         # Anomaly detection
@@ -37,10 +37,10 @@ class DeepGenerativeModel:
         self.generated_to_display = 20
 
         model_identifier = "ae"
-        if use_vae:
+        if self.use_vae:
             model_identifier = "vae"
             self.epochs = 100
-            self.latent_dim = 3
+            self.latent_dim = 5
         if self.stacked_dataset:
             self.channels = 3
 
@@ -48,7 +48,7 @@ class DeepGenerativeModel:
         self.ae_weights_file_name = f"./model_{model_identifier}_std/verification_model"
         if self.run_anomaly_detection:
             self.ae_weights_file_name = f"./model_{model_identifier}_anom/verification_model"
-        if use_vae:
+        if self.use_vae:
             self.auto_encoder = VariationalAutoEncoder(
                 self.latent_dim,
                 self.image_size,
@@ -182,21 +182,19 @@ class DeepGenerativeModel:
 
         # Fetch complete test data set
         x_test, _ = gen_test.get_full_data_set(training=False)
-        # Only look at one channel:
-        # x_test = x_test[:, :, :, [0]]
 
         print("Checking for anomalies")
         # Display the k_anomalies images with the most loss for
         # first 'check_for_anomalies' (e.g. 1000) samples of test set.
         if self.use_vae:
-            # TODO: Sends in three-channel image, must fix!
-            prob = self.auto_encoder.measure_loss_by_sampling(
+            prob = self.auto_encoder.measure_loss(
                 x_test, check_range=self.check_for_anomalies)
             self.display_anomalies(self.k_anomalies,
                                    x_test,
                                    prob,
                                    use_prob=True)
         else:
+            # TODO: remove decoding?
             decoded_imgs = []
             for channel in range(x_test.shape[3]):
                 decoded_imgs.append(self.call(x_test[:, :, :, [channel]]))
@@ -225,7 +223,7 @@ class DeepGenerativeModel:
         if self.use_vae:
             encoded_imgs = self.auto_encoder.encoder(x_test)
             decoded_imgs = np.array(
-                self.auto_encoder.decoder(encoded_imgs).mode())
+                self.auto_encoder.decoder(encoded_imgs).mode())[:, :, :, 0]
             return decoded_imgs
         encoded_imgs = self.auto_encoder.encoder(x_test).numpy()
         decoded_imgs = self.auto_encoder.decoder(encoded_imgs).numpy()
@@ -292,13 +290,9 @@ class DeepGenerativeModel:
         cov = self.verification_net.check_class_coverage(reconstructed)
         pred, acc = self.verification_net.check_predictability(
             reconstructed, y_test, tolerance=tolerance)
-        predorig, accorig = self.verification_net.check_predictability(
-            x_test, y_test, tolerance=tolerance)
         print(f"Coverage: {100*cov:.2f}%")
         print(f"Predictability: {100*pred:.2f}%")
         print(f"Accuracy: {100 * acc:.2f}%")
-        print(f"Predictabilityorig: {100*predorig:.2f}%")
-        print(f"Accuracyorig: {100 * accorig:.2f}%")
         self.display_reconstructions(x_test, decoded_imgs, y_test,
                                      self.number_of_reconstructions,
                                      self.display_offset)
@@ -306,8 +300,6 @@ class DeepGenerativeModel:
         generated_imgs = self.generate_images()
         if not self.stacked_dataset:
             generated_imgs = generated_imgs[:, :, :, np.newaxis]
-        if self.use_vae:
-            generated_imgs = generated_imgs.numpy()
 
         gen_cov = self.verification_net.check_class_coverage(generated_imgs)
         gen_pred, _ = self.verification_net.check_predictability(
@@ -321,7 +313,7 @@ def main():
     Main method for running the deep generative model.
     """
     tf.get_logger().setLevel('WARNING')
-    dgm = DeepGenerativeModel(use_vae=False)
+    dgm = DeepGenerativeModel()
     dgm.run()
 
 

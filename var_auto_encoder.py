@@ -27,28 +27,53 @@ class VariationalAutoEncoder(ks.models.Model):
                                                  reinterpreted_batch_ndims=1)
 
         self.encoder = ks.Sequential([
-            ks.Input(shape=(image_size, image_size, 1)),
+            ks.layers.InputLayer(input_shape=(28, 28, 1)),
+            ks.layers.Lambda(lambda x: tf.cast(x, tf.float32) - 0.5),
+            ks.layers.Conv2D(32,
+                             3,
+                             strides=2,
+                             padding='same',
+                             activation='relu'),
+            ks.layers.Conv2D(64,
+                             3,
+                             strides=2,
+                             padding='same',
+                             activation='relu'),
+            ks.layers.Conv2D(16,
+                             3,
+                             strides=1,
+                             padding='same',
+                             activation='relu'),
             ks.layers.Flatten(),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(300, activation='relu'),
-            ks.layers.Dense(40, activation='relu'),
             ks.layers.Dense(self.get_mvntl_input_size(), activation=None),
             tfp.layers.MultivariateNormalTriL(
                 self.latent_dim,
-                activity_regularizer=tfp.layers.KLDivergenceRegularizer(
+                activity_regularizer=tfp.layers.
+                KLDivergenceRegularizer(  # Apply KL-divergence as regularizer
                     self.p_z)),
         ])
         self.encoder.summary()
 
         self.decoder = ks.Sequential([
-            ks.layers.Input(shape=(latent_dim)),
-            ks.layers.Dense(40, activation='relu'),
-            ks.layers.Dense(250, activation='relu'),
-            ks.layers.Dense(400, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(image_size**2),
+            ks.layers.InputLayer(input_shape=[latent_dim]),
+            ks.layers.Reshape([1, 1, latent_dim]),
+            ks.layers.Conv2DTranspose(64,
+                                      7,
+                                      strides=1,
+                                      padding='valid',
+                                      activation='relu'),
+            ks.layers.Conv2DTranspose(64,
+                                      3,
+                                      strides=2,
+                                      padding='same',
+                                      activation='relu'),
+            ks.layers.Conv2DTranspose(32,
+                                      3,
+                                      strides=2,
+                                      padding='same',
+                                      activation='relu'),
+            ks.layers.Conv2D(1, 5, strides=1, padding='same', activation=None),
+            ks.layers.Flatten(),
             tfp.layers.IndependentBernoulli(
                 (image_size, image_size, 1),
                 tfp.distributions.Bernoulli.logits),
@@ -116,21 +141,26 @@ class VariationalAutoEncoder(ks.models.Model):
         vector space and feeding them through the decoder.
         """
         latent_vectors = self.p_z.sample(number_to_generate)
-        return self.decoder(latent_vectors).mode()
+        return self.decoder(latent_vectors).mode()[:, :, :, 0]
 
-    def measure_loss_by_sampling(self, x_test, check_range: int = 200):
+    def measure_loss(self, x_test, check_range: int = 200):
         """
         Measures the loss for each test sample and returns a list of losses
         corresponding to each sample in x_test on the same index.
         """
+        # TODO: move N and checkrange to constructor
         N = 5000
         check_range = 4000
         generated = self.generate_images(N).numpy()
         prob = []
         for i in range(check_range):
-            x_input = np.repeat(x_test[[i], :, :, :], repeats=N, axis=0)
-            loss_i = tf.losses.binary_crossentropy(x_input.reshape(N, 784),
-                                                   generated.reshape(N, 784),
-                                                   axis=1)
-            prob.append(np.exp(np.array(loss_i) * -1).mean())
+            loss_i = 0
+            for channel in range(x_test.shape[3]):
+                x_input = np.repeat(x_test[[i], :, :, [channel]],
+                                    repeats=N,
+                                    axis=0)
+                loss_i_channel = tf.losses.binary_crossentropy(
+                    x_input.reshape(N, 784), generated.reshape(N, 784), axis=1)
+                loss_i += np.exp(np.array(loss_i_channel) * -1).mean()
+            prob.append(loss_i)
         return prob
