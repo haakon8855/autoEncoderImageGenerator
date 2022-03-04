@@ -17,12 +17,12 @@ class DeepGenerativeModel:
     """
 
     def __init__(self):
-        self.use_vae = False
+        self.use_vae = True
         self.latent_dim = 5
         self.epochs = 45
         self.image_size = 28
         self.retrain = False
-        self.run_anomaly_detection = False
+        self.run_anomaly_detection = True
         self.stacked_dataset = False
         self.channels = 1
         self.batch_size = 1024
@@ -35,12 +35,16 @@ class DeepGenerativeModel:
         # Generative model
         self.number_to_generate = 400
         self.generated_to_display = 20
+        self.learning_rate = 1e-3
 
         model_identifier = "ae"
         if self.use_vae:
             model_identifier = "vae"
             self.epochs = 100
             self.latent_dim = 5
+            self.check_for_anomalies = 4000
+            self.anomaly_samples = 5000
+            self.learning_rate = 1e-3
         if self.stacked_dataset:
             self.channels = 3
 
@@ -80,12 +84,12 @@ class DeepGenerativeModel:
         """
         if self.use_vae:
             self.auto_encoder.compile(
-                optimizer=tf.optimizers.Adam(learning_rate=1e-3),
+                optimizer=tf.optimizers.Adam(learning_rate=self.learning_rate),
                 loss=VariationalAutoEncoder.loss,
             )
         else:
             self.auto_encoder.compile(
-                optimizer=tf.optimizers.Adam(learning_rate=1e-3),
+                optimizer=tf.optimizers.Adam(learning_rate=self.learning_rate),
                 loss=ks.losses.BinaryCrossentropy(),
             )
 
@@ -188,17 +192,14 @@ class DeepGenerativeModel:
         # first 'check_for_anomalies' (e.g. 1000) samples of test set.
         if self.use_vae:
             prob = self.auto_encoder.measure_loss(
-                x_test, check_range=self.check_for_anomalies)
+                x_test,
+                check_range=self.check_for_anomalies,
+                samples=self.anomaly_samples)
             self.display_anomalies(self.k_anomalies,
                                    x_test,
                                    prob,
                                    use_prob=True)
         else:
-            # TODO: remove decoding?
-            decoded_imgs = []
-            for channel in range(x_test.shape[3]):
-                decoded_imgs.append(self.call(x_test[:, :, :, [channel]]))
-            decoded_imgs = np.moveaxis(np.array(decoded_imgs), 0, -1)
             loss = self.auto_encoder.measure_loss(x_test,
                                                   self.check_for_anomalies)
             self.display_anomalies(self.k_anomalies, x_test, loss)
@@ -251,10 +252,6 @@ class DeepGenerativeModel:
         # Fetch training and test data sets
         x_train, _ = gen_train.get_full_data_set(training=True)
         x_test, y_test = gen_test.get_full_data_set(training=False)
-
-        # # Only look at one channel:
-        # x_train = x_train[:, :, :, [0]]
-        # x_test = x_test[:, :, :, [0]]
 
         self.init_auto_encoder()
         # Train the network using the training data set and predefined parameters

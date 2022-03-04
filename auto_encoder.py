@@ -95,6 +95,7 @@ class AutoEncoder(ks.models.Model):
         vector space and feeding them through the decoder.
         """
         latent_vectors = np.random.randn(number_to_generate, self.latent_dim)
+        latent_vectors *= 10
         return self.decoder(latent_vectors).numpy()
 
     def measure_loss(self, x_test, check_range: int = 1000):

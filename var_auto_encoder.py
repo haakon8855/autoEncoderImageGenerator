@@ -143,24 +143,26 @@ class VariationalAutoEncoder(ks.models.Model):
         latent_vectors = self.p_z.sample(number_to_generate)
         return self.decoder(latent_vectors).mode()[:, :, :, 0]
 
-    def measure_loss(self, x_test, check_range: int = 200):
+    def measure_loss(self,
+                     x_test,
+                     check_range: int = 200,
+                     samples: int = 5000):
         """
         Measures the loss for each test sample and returns a list of losses
         corresponding to each sample in x_test on the same index.
         """
-        # TODO: move N and checkrange to constructor
-        N = 5000
-        check_range = 4000
-        generated = self.generate_images(N).numpy()
+        generated = self.generate_images(samples).numpy()
         prob = []
         for i in range(check_range):
             loss_i = 0
             for channel in range(x_test.shape[3]):
                 x_input = np.repeat(x_test[[i], :, :, [channel]],
-                                    repeats=N,
+                                    repeats=samples,
                                     axis=0)
                 loss_i_channel = tf.losses.binary_crossentropy(
-                    x_input.reshape(N, 784), generated.reshape(N, 784), axis=1)
+                    x_input.reshape(samples, 784),
+                    generated.reshape(samples, 784),
+                    axis=1)
                 loss_i += np.exp(np.array(loss_i_channel) * -1).mean()
             prob.append(loss_i)
         return prob
