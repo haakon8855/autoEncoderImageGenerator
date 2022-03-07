@@ -17,9 +17,9 @@ class DeepGenerativeModel:
     """
 
     def __init__(self):
-        self.use_vae = False
+        self.use_vae = True
         self.run_anomaly_detection = False
-        self.stacked_dataset = False
+        self.stacked_dataset = True
         self.encoded_dim = 5
         self.epochs = 45
         self.image_size = 28
@@ -40,7 +40,7 @@ class DeepGenerativeModel:
         self.model_identifier = "ae"
         if self.use_vae:
             self.model_identifier = "vae"
-            self.epochs = 100
+            self.epochs = 130
             self.encoded_dim = 5
             self.check_for_anomalies = 4000
             self.anomaly_samples = 5000

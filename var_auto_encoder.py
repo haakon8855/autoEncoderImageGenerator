@@ -28,7 +28,6 @@ class VariationalAutoEncoder(ks.models.Model):
 
         self.encoder = ks.Sequential([
             ks.layers.InputLayer(input_shape=(28, 28, 1)),
-            ks.layers.Lambda(lambda x: tf.cast(x, tf.float32) - 0.5),
             ks.layers.Conv2D(32,
                              3,
                              strides=2,
