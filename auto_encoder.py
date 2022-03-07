@@ -10,12 +10,12 @@ class AutoEncoder(ks.models.Model):
     """
 
     def __init__(self,
-                 latent_dim,
+                 encoded_size,
                  image_size,
                  file_name="./model_ae_std/verification_model",
                  retrain=False):
         super(AutoEncoder, self).__init__()
-        self.latent_dim = latent_dim
+        self.encoded_size = encoded_size
         self.image_size = image_size
         self.file_name = file_name
         self.retrain = retrain
@@ -29,11 +29,11 @@ class AutoEncoder(ks.models.Model):
             ks.layers.Dense(300, activation='relu'),
             ks.layers.Dense(300, activation='relu'),
             ks.layers.Dense(150, activation='relu'),
-            ks.layers.Dense(latent_dim, activation='relu'),
+            ks.layers.Dense(encoded_size, activation='relu'),
         ])
         self.encoder.summary()
         self.decoder = ks.Sequential([
-            ks.layers.Input(shape=(latent_dim)),
+            ks.layers.Input(shape=(encoded_size)),
             ks.layers.Dense(150, activation='relu'),
             ks.layers.Dense(400, activation='relu'),
             ks.layers.Dense(400, activation='relu'),
@@ -91,12 +91,13 @@ class AutoEncoder(ks.models.Model):
 
     def generate_images(self, number_to_generate: int):
         """
-        Generate a number of images by generating random vectors in the latent
-        vector space and feeding them through the decoder.
+        Generate a number of images by generating random vectors in the
+        latent/encoded vector space and feeding them through the decoder.
         """
-        latent_vectors = np.random.randn(number_to_generate, self.latent_dim)
-        latent_vectors *= 10
-        return self.decoder(latent_vectors).numpy()
+        encoded_vectors = np.random.randn(number_to_generate,
+                                          self.encoded_size)
+        encoded_vectors *= 10
+        return self.decoder(encoded_vectors).numpy()
 
     def measure_loss(self, x_test, check_range: int = 1000):
         """

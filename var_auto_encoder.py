@@ -12,18 +12,18 @@ class VariationalAutoEncoder(ks.models.Model):
     """
 
     def __init__(self,
-                 latent_dim,
+                 encoded_dim,
                  image_size,
                  file_name="./model_vae_std/verification_model",
                  retrain=False):
         super(VariationalAutoEncoder, self).__init__()
-        self.latent_dim = latent_dim
+        self.encoded_dim = encoded_dim  # Dimension of latent/encoded representation
         self.image_size = image_size
         self.file_name = file_name
         self.retrain = retrain
 
         self.p_z = tfp.distributions.Independent(tfp.distributions.Normal(
-            loc=tf.zeros(latent_dim), scale=1),
+            loc=tf.zeros(encoded_dim), scale=1),
                                                  reinterpreted_batch_ndims=1)
 
         self.encoder = ks.Sequential([
@@ -47,7 +47,7 @@ class VariationalAutoEncoder(ks.models.Model):
             ks.layers.Flatten(),
             ks.layers.Dense(self.get_mvntl_input_size(), activation=None),
             tfp.layers.MultivariateNormalTriL(
-                self.latent_dim,
+                self.encoded_dim,
                 activity_regularizer=tfp.layers.
                 KLDivergenceRegularizer(  # Apply KL-divergence as regularizer
                     self.p_z)),
@@ -55,8 +55,8 @@ class VariationalAutoEncoder(ks.models.Model):
         self.encoder.summary()
 
         self.decoder = ks.Sequential([
-            ks.layers.InputLayer(input_shape=[latent_dim]),
-            ks.layers.Reshape([1, 1, latent_dim]),
+            ks.layers.InputLayer(input_shape=[encoded_dim]),
+            ks.layers.Reshape([1, 1, encoded_dim]),
             ks.layers.Conv2DTranspose(64,
                                       7,
                                       strides=1,
@@ -86,7 +86,8 @@ class VariationalAutoEncoder(ks.models.Model):
         """
         Returns the size needed for the multivariate normal tril layer.
         """
-        return self.latent_dim + self.latent_dim * (self.latent_dim + 1) // 2
+        return self.encoded_dim + self.encoded_dim * (self.encoded_dim +
+                                                      1) // 2
 
     def load_all_weights(self):
         """
@@ -137,11 +138,11 @@ class VariationalAutoEncoder(ks.models.Model):
 
     def generate_images(self, number_to_generate: int):
         """
-        Generate a number of images by generating random vectors in the latent
-        vector space and feeding them through the decoder.
+        Generate a number of images by generating random vectors in the
+        latent/encoded vector space and feeding them through the decoder.
         """
-        latent_vectors = self.p_z.sample(number_to_generate)
-        return self.decoder(latent_vectors).mode()[:, :, :, 0]
+        encoded_vectors = self.p_z.sample(number_to_generate)
+        return self.decoder(encoded_vectors).mode()[:, :, :, 0]
 
     def measure_loss(self,
                      x_test,

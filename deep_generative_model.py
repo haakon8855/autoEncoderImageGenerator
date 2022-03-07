@@ -17,13 +17,12 @@ class DeepGenerativeModel:
     """
 
     def __init__(self):
-        self.use_vae = True
-        self.latent_dim = 5
+        self.use_vae = False
+        self.run_anomaly_detection = False
+        self.stacked_dataset = False
+        self.encoded_dim = 5
         self.epochs = 45
         self.image_size = 28
-        self.retrain = False
-        self.run_anomaly_detection = True
-        self.stacked_dataset = False
         self.channels = 1
         self.batch_size = 1024
         # Anomaly detection
@@ -37,11 +36,12 @@ class DeepGenerativeModel:
         self.generated_to_display = 20
         self.learning_rate = 1e-3
 
-        model_identifier = "ae"
+        self.data_set_identifier = ["binary", "stacked"][self.stacked_dataset]
+        self.model_identifier = "ae"
         if self.use_vae:
-            model_identifier = "vae"
+            self.model_identifier = "vae"
             self.epochs = 100
-            self.latent_dim = 5
+            self.encoded_dim = 5
             self.check_for_anomalies = 4000
             self.anomaly_samples = 5000
             self.learning_rate = 1e-3
@@ -49,21 +49,19 @@ class DeepGenerativeModel:
             self.channels = 3
 
         # Set path for storing and loading trained network weights
-        self.ae_weights_file_name = f"./model_{model_identifier}_std/verification_model"
+        self.ae_weights_file_name = f"./model_{self.model_identifier}_std/verification_model"
         if self.run_anomaly_detection:
-            self.ae_weights_file_name = f"./model_{model_identifier}_anom/verification_model"
+            self.ae_weights_file_name = f"./model_{self.model_identifier}_anom/verification_model"
         if self.use_vae:
             self.auto_encoder = VariationalAutoEncoder(
-                self.latent_dim,
+                self.encoded_dim,
                 self.image_size,
-                file_name=self.ae_weights_file_name,
-                retrain=self.retrain)
+                file_name=self.ae_weights_file_name)
         else:
             self.auto_encoder = AutoEncoder(
-                self.latent_dim,
+                self.encoded_dim,
                 self.image_size,
-                file_name=self.ae_weights_file_name,
-                retrain=self.retrain)
+                file_name=self.ae_weights_file_name)
 
         self.verification_net = None
         self.init_verification_net()
@@ -123,6 +121,9 @@ class DeepGenerativeModel:
             plt.gray()
             axs.get_xaxis().set_visible(False)
             axs.get_yaxis().set_visible(False)
+        plt.savefig(
+            f"images/{self.model_identifier}_{self.data_set_identifier}_reconstructions"
+        )
         plt.show()
 
     def display_generated(self, images, amount_to_display: int):
@@ -145,6 +146,9 @@ class DeepGenerativeModel:
                 current.get_yaxis().set_visible(False)
                 i += 1
                 if i == amount_to_display:
+                    plt.savefig(
+                        f"images/{self.model_identifier}_{self.data_set_identifier}_generated"
+                    )
                     plt.show()
                     return
 
@@ -172,6 +176,11 @@ class DeepGenerativeModel:
             plt.gray()
             axs.get_xaxis().set_visible(False)
             axs.get_yaxis().set_visible(False)
+
+        plt.savefig(
+            f"images/{self.model_identifier}_{self.data_set_identifier}_anomalies"
+        )
+
         plt.show()
 
     def detect_anomalies(self):
@@ -206,7 +215,7 @@ class DeepGenerativeModel:
 
     def generate_images(self):
         """
-        Generate random vectors in the latent vector-space
+        Generate random vectors in the latent/encoded vector-space
         and feed them through the decoder.
         """
         generated = []
