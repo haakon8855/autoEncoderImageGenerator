@@ -18,10 +18,10 @@ class DeepGenerativeModel:
 
     def __init__(self):
         self.use_vae = False  # Whether to use standard AE or VAE
-        self.run_anomaly_detection = False  # Whether to run anomaly detection
+        self.run_anomaly_detection = True  # Whether to run anomaly detection
         self.stacked_dataset = False  # Whether to use mono or color data set
         self.encoded_dim = 5  # Size of encoded vector
-        self.epochs = 45  # Number of epochs to train
+        self.epochs = 105  # Number of epochs to train
         self.image_size = 28  # Size of image
         self.channels = 1  # Number of color channels
         self.batch_size = 1024

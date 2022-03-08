@@ -27,10 +27,11 @@ class AutoEncoder(ks.models.Model):
         self.encoder = ks.Sequential([
             ks.Input(shape=(image_size, image_size, 1)),
             ks.layers.Flatten(),
-            ks.layers.Dense(600, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
             ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(300, activation='relu'),
-            ks.layers.Dense(300, activation='relu'),
             ks.layers.Dense(300, activation='relu'),
             ks.layers.Dense(150, activation='relu'),
             ks.layers.Dense(encoded_size, activation='relu'),
@@ -41,12 +42,14 @@ class AutoEncoder(ks.models.Model):
         # size at 28*28=784 pixels. The output is reshaped into an image.
         self.decoder = ks.Sequential([
             ks.layers.Input(shape=(encoded_size)),
-            ks.layers.Dense(150, activation='relu'),
-            ks.layers.Dense(400, activation='relu'),
-            ks.layers.Dense(400, activation='relu'),
-            ks.layers.Dense(500, activation='relu'),
-            ks.layers.Dense(600, activation='relu'),
-            ks.layers.Dense(700, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(1000, activation='relu'),
             ks.layers.Dense(image_size**2, activation='sigmoid'),
             ks.layers.Reshape((image_size, image_size))
         ])
