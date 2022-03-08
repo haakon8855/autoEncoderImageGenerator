@@ -89,7 +89,7 @@ class VariationalAutoEncoder(ks.models.Model):
                              activation='relu'),
             ks.layers.Flatten(),
             ks.layers.Dense(1000, activation='relu'),
-            ks.layers.Dense(784, activation=None),
+            ks.layers.Dense(image_size**2, activation=None),
             tfp.layers.IndependentBernoulli(
                 (image_size, image_size, 1),
                 tfp.distributions.Bernoulli.logits),
