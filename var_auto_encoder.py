@@ -48,6 +48,7 @@ class VariationalAutoEncoder(ks.models.Model):
                              padding='same',
                              activation='relu'),
             ks.layers.Flatten(),
+            ks.layers.Dense(500, activation='relu'),
             ks.layers.Dense(self.get_mvntl_input_size(), activation=None),
             tfp.layers.MultivariateNormalTriL(
                 self.encoded_dim,
@@ -81,8 +82,14 @@ class VariationalAutoEncoder(ks.models.Model):
                                       strides=2,
                                       padding='same',
                                       activation='relu'),
-            ks.layers.Conv2D(1, 5, strides=1, padding='same', activation=None),
+            ks.layers.Conv2D(1,
+                             5,
+                             strides=1,
+                             padding='same',
+                             activation='relu'),
             ks.layers.Flatten(),
+            ks.layers.Dense(1000, activation='relu'),
+            ks.layers.Dense(784, activation=None),
             tfp.layers.IndependentBernoulli(
                 (image_size, image_size, 1),
                 tfp.distributions.Bernoulli.logits),

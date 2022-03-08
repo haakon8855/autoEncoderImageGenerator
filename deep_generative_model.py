@@ -41,7 +41,7 @@ class DeepGenerativeModel:
         if self.use_vae:
             # Parameters specific to VAE:
             self.model_identifier = "vae"
-            self.epochs = 260
+            self.epochs = 100
             self.encoded_dim = 5
             self.check_for_anomalies = 4000
             self.anomaly_samples = 5000  # Number of generated images to compare with
