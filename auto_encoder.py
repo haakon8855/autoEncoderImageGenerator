@@ -112,7 +112,6 @@ class AutoEncoder(ks.models.Model):
         # encoded vectors have values in the range [0.0, 1.0], but better
         # results are achieved when sampling vectors in the range [0.0, 10.0],
         # or some other interval from 0.0 to > 1.0
-        encoded_vectors *= 10
         return self.decoder(encoded_vectors).numpy()
 
     def measure_loss(self, x_test, check_range: int = 1000):
