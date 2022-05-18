@@ -11,7 +11,7 @@ In this program, I use Auto Encoders to try and generate brand new images by tra
 
 When the standard Auto Encoder was trained on single channel MNIST, the generated images were not that great. Some digits are recognizable.
 
-![Illustration of generated images from standard auto encoder](Images/ae_mono_generated.png)
+![Illustration of generated images from standard auto encoder](images/ae_mono_generated.png)
 
 The Variational Auto Encoder performed much better. Here, almost all generated images resemble real digits, and the generated digits are much more varied.
 
