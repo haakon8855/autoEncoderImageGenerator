@@ -39,7 +39,7 @@ Most settings must be changed in the code itself. The pivotal parameters of the 
 
 ## Acknowledgments
 
-All code in `stacked_mnist.py` and `verification_net.py` were provided py course staff in IT3030 at NTNU.
+All code in `stacked_mnist.py` and `verification_net.py` were provided by course staff in IT3030 at NTNU.
 
 ## License
 
