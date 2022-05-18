@@ -36,6 +36,10 @@ Clone the project to any local directory and run the main script `deep_generativ
 - Python 3.9 or higher
 - Tensorflow (Verified to work with ver. 2.9.0)
 - Tensorflow Probability (Verified to work with ver. 0.16.0)
+- Numpy
+- Matplotlib
+
+`pip install tensorflow tensorflow-probability numpy matplotlib`
 
 ## Configuration
 
