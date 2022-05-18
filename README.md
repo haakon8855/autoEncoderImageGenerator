@@ -37,6 +37,10 @@ Clone the project to any local directory and run the main script `deep_generativ
 
 Most settings must be changed in the code itself. The pivotal parameters of the program lies in the constructor of the `DeepGenerativeModel`-class in the `deep_generative_mode.py`-file. Here you can set whether to use a Variational Auto Encoder or a standard Auto Encoder as well as whether to use the stacked data set and whether to perform anomaly detection on the generated images.
 
+## Acknowledgments
+
+All code in `stacked_mnist.py` and `verification_net.py` were provided py course staff in IT3030 at NTNU.
+
 ## License
 
 This code is protected under the [GNU General Public License 3.0](http://www.gnu.org/licenses/gpl-3.0.html)
