@@ -3,7 +3,6 @@
 from enum import auto, Enum
 import numpy as np
 import matplotlib.pyplot as plt
-# pylint: disable=import-error,no-name-in-module
 from tensorflow.keras.datasets import mnist
 
 
@@ -255,13 +254,3 @@ class StackedMNISTData:
 
         # Show the thing ...
         plt.show()
-
-
-if __name__ == "__main__":
-    gen = StackedMNISTData(mode=DataMode.COLOR_BINARY_MISSING,
-                           default_batch_size=9)
-    img, cls = gen.get_random_batch(batch_size=9)
-    gen.plot_example(images=img, labels=cls)
-
-    for (img, cls) in gen.batch_generator(training=False, batch_size=2048):
-        print(f"Batch has size: Images: {img.shape}; Labels {cls.shape}")

@@ -17,9 +17,12 @@ class DeepGenerativeModel:
     """
 
     def __init__(self):
+        # Pivotal parameters
         self.use_vae = False  # Whether to use standard AE or VAE
         self.run_anomaly_detection = False  # Whether to run anomaly detection
         self.stacked_dataset = False  # Whether to use mono or color data set
+
+        # Other parameters
         self.encoded_dim = 5  # Size of encoded vector
         self.epochs = 105  # Number of epochs to train
         self.image_size = 28  # Size of image
@@ -258,7 +261,7 @@ class DeepGenerativeModel:
             decoded_imgs = np.array(
                 self.auto_encoder.decoder(encoded_imgs).mode())[:, :, :, 0]
             return decoded_imgs
-        # Output from AE is run through haversine step-function
+        # Output from AE is run through heaviside step-function
         # to create a crisper image.
         encoded_imgs = self.auto_encoder.encoder(x_test).numpy()
         decoded_imgs = self.auto_encoder.decoder(encoded_imgs).numpy()
